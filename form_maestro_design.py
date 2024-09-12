@@ -2,7 +2,7 @@ import tkinter as tk
 import datetime
 from PIL import Image, ImageTk
 from mailjet_rest import Client
-import os
+from escpos.printer import Usb #impresora imagen
 from tkinter import messagebox
 from tkinter import font, ttk, StringVar, PhotoImage
 from datetime import datetime
@@ -688,7 +688,7 @@ class FormularioMaestroDesign(tk.Tk):
                     },
                     "To": [
                         {
-                            "Email": "omar.pc.work@gmail.com",
+                            "Email": "marcobengy12@gmail.com",
                             "Name": "Destinatario"
                         }
                     ],
@@ -701,7 +701,7 @@ class FormularioMaestroDesign(tk.Tk):
         print(result.status_code)
         print(result.json())
 
-
+# CORREO DE CORTE PARA LA ENTRADA DEL INGRESO
     def actualizar_seccion_cancelados(self):
         # Limpiar el Treeview de "cancelados"
         for item in self.tree_cancelado.get_children():
