@@ -3,7 +3,6 @@ import datetime
 from PIL import Image, ImageTk
 from mailjet_rest import Client
 import os
-from tkcalendar import Calendar
 from tkinter import messagebox
 from tkinter import font, ttk, StringVar, PhotoImage
 from datetime import datetime
@@ -65,7 +64,7 @@ class FormularioMaestroDesign(tk.Tk):
         self.buttonMenuLateral.pack(side=tk.LEFT)
 
         # Etiqueta de información
-        self.labelTitulo = tk.Label(self.barra_superior, text="atb2021@gmail.com")
+        self.labelTitulo = tk.Label(self.barra_superior, text="Soporte Técnico: 2294733415")
         self.labelTitulo.config(fg="#fff", font=("Roboto", 10), bg=COLOR_BARRA_SUPERIOR, padx=10, width=20)
         self.labelTitulo.pack(side=tk.RIGHT)
 
@@ -597,19 +596,34 @@ class FormularioMaestroDesign(tk.Tk):
         folio_entry = tk.Entry(ventana_folio)
         folio_entry.pack(padx=10, pady=10)
 
+        tk.Label(ventana_folio, text="Motivo de la cancelación:").pack(pady=10)
+        motivo_entry = tk.Entry(ventana_folio)
+        motivo_entry.pack(padx=10, pady=10)
+
+        tk.Label(ventana_folio, text="Comentario:").pack(pady=10)
+        comentario_entry = tk.Entry(ventana_folio)
+        comentario_entry.pack(padx=10, pady=10)
+
         # Función combinada para cancelar el ticket y enviar el correo
         def funcion_combinada():
-            self.cancelar_ticket(folio_entry.get(), ventana_folio)
-            self.enviar_correo()
+            folio = folio_entry.get()
+            motivo = motivo_entry.get()
+            comentario = comentario_entry.get()
+
+            # Cancelar el ticket y obtener los datos para el correo
+            datos_ticket = self.cancelar_ticket(folio, motivo, comentario, ventana_folio)
+
+            if datos_ticket:
+                folio, numero_placas, motivo, comentario, hora_registro, precio_boleto = datos_ticket
+                # Enviar el correo con los datos del ticket
+                self.enviar_correo(folio, numero_placas, motivo, comentario, hora_registro, precio_boleto)
 
         # Botón para confirmar la liberación
-        tk.Button(ventana_folio, text="Liberar", command=funcion_combinada).pack(pady=10)
+        tk.Button(ventana_folio, text="Cancelar Ticket", command=funcion_combinada).pack(pady=10)
 
-
-
-    def cancelar_ticket(self, folioliberar, ventana_folio):
+    def cancelar_ticket(self, folio, motivo, comentario, ventana_folio):
         # Buscar el ticket en la base de datos
-        self.db_cursor.execute("SELECT * FROM rentas WHERE folio = ?", (folioliberar,))
+        self.db_cursor.execute("SELECT * FROM rentas WHERE folio = ?", (folio,))
         ticket = self.db_cursor.fetchone()
 
         if ticket:
@@ -619,35 +633,51 @@ class FormularioMaestroDesign(tk.Tk):
                 INSERT INTO cancelados (estado_cancelado, folio, numero_placas, motivo, comentario,
                  hora_registro, precio_boleto)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', ("Cancelado", ticket[2], ticket[3], ticket[4], ticket[5], hora_registro,ticket[9]))
+            ''', ("Cancelado", ticket[2], ticket[3], motivo, comentario, hora_registro, ticket[9]))
             self.db_connection.commit()
 
             # Eliminar el ticket de la tabla de rentas
-            self.db_cursor.execute("DELETE FROM rentas WHERE folio = ?", (folioliberar,))
+            self.db_cursor.execute("DELETE FROM rentas WHERE folio = ?", (folio,))
             self.db_connection.commit()
 
             # Eliminar el ticket de la subsección "tickets" (Treeview)
             for item in self.tree.get_children():
-                if self.tree.item(item, 'values')[1] == folioliberar:
+                if self.tree.item(item, 'values')[1] == folio:
                     self.tree.delete(item)
                     break
 
             # Añadir el ticket actualizado a la subsección "cancelado"
             self.tree_entradas.insert('', 'end', values=(
-                ticket[1], ticket[2], ticket[3], ticket[4], ticket[5], hora_registro, ticket[9]))
+                ticket[1], ticket[2], ticket[3], motivo, comentario, hora_registro, ticket[9]))
 
             self.actualizar_seccion_cancelados()
 
-            print(f"El ticket con folio {folioliberar} ha sido liberado y movido a 'cancelados'.")
-            ventana_folio.destroy()  # Cerrar la ventana una vez se haya liberado el espacio
-        else:
-            print(f"No se encontró el ticket con folio {folioliberar}.")
+            print(f"El ticket con folio {folio} ha sido liberado y movido a 'cancelados'.")
 
-    def enviar_correo(self):
+            # Devolver los datos del ticket
+            ventana_folio.destroy()
+            return ticket[2], ticket[3], motivo, comentario, hora_registro, ticket[9]
+        else:
+            print(f"No se encontró el ticket con folio {folio}.")
+            return None
+
+    def enviar_correo(self, folio, numero_placas, motivo, comentario, hora_registro, precio_boleto):
         # Envío del correo con Mailjet
         api_key = 'aa87c996dca415dd9a3c08a4fc782b0e'
         api_secret = '244a4f5260fbdc2b7c3a80651cad68a4'
         mailjet = Client(auth=(api_key, api_secret), version='v3.1')
+
+        # Crear el cuerpo del correo con la información del ticket
+        body_text = f"""
+        Ticket Cancelado:
+
+        Folio: {folio}
+        Número de placas: {numero_placas}
+        Motivo: {motivo}
+        Comentario: {comentario}
+        Hora de Cancelación: {hora_registro}
+        Precio del boleto: ${precio_boleto}
+        """
 
         data = {
             'Messages': [
@@ -658,12 +688,12 @@ class FormularioMaestroDesign(tk.Tk):
                     },
                     "To": [
                         {
-                            "Email": "marcobengy12@gmail.com",
-                            "Name": "SOLUTO"
+                            "Email": "omar.pc.work@gmail.com",
+                            "Name": "Destinatario"
                         }
                     ],
-                    "Subject": "Correo automático desde Python XD",
-                    "TextPart": "Correo automático usando Mailjet"
+                    "Subject": "Ticket Cancelado",
+                    "TextPart": body_text
                 }
             ]
         }
