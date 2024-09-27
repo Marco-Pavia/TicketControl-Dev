@@ -26,7 +26,6 @@ class FormularioMaestroDesign(tk.Tk):
         self.crear_secciones()
         self.mostrar_seccion("inicio")  #Crear pantalla de inicio o inicar con frame inicio
 
-
         self.db_connection = sqlite3.connect('rentas.db')
         self.db_cursor = self.db_connection.cursor()
         self.create_table_tickets()
@@ -54,19 +53,15 @@ class FormularioMaestroDesign(tk.Tk):
         font_awesome = font.Font(family='FontAwesome', size=12)
 
         # Etiqueta de título
-        self.labelTitulo = tk.Label(self.barra_superior, text="Autotransportes Banderilla")
-        self.labelTitulo.config(fg="#fff", font=("Roboto", 15), bg=COLOR_BARRA_SUPERIOR, pady=10, width=24)
+        self.labelTitulo = tk.Label(self.barra_superior, text="AUTOTRANSPORTES BANDERILLA")
+        self.labelTitulo.config(fg="#fff", font=("Roboto", 17), bg=COLOR_BARRA_SUPERIOR, pady=10, width=30)
         self.labelTitulo.pack(side=tk.LEFT)
-
-        # Botón del menú lateral
-        self.buttonMenuLateral = tk.Button(self.barra_superior, text="\uf0c9", font=font_awesome,
-                                           command=self.toggle_panel, bd=0, bg=COLOR_BARRA_SUPERIOR, fg="white")
-        self.buttonMenuLateral.pack(side=tk.LEFT)
 
         # Etiqueta de información
         self.labelTitulo = tk.Label(self.barra_superior, text="Soporte Técnico: 2294733415")
-        self.labelTitulo.config(fg="#fff", font=("Roboto", 10), bg=COLOR_BARRA_SUPERIOR, padx=10, width=20)
+        self.labelTitulo.config(fg="#fff", font=("Roboto", 17), bg=COLOR_BARRA_SUPERIOR, padx=10, width=25)
         self.labelTitulo.pack(side=tk.RIGHT)
+
 
         # Menú en la barra superior
         self.menu_bar = tk.Menu(self)
@@ -332,7 +327,6 @@ class FormularioMaestroDesign(tk.Tk):
                     # Imprimir la línea de texto
                     hdc.TextOut(x, y, line)
 
-                # Añadir un avance de papel al final para asegurar que salga el ticket completo
                 extra_lines = 15  # Número de líneas adicionales para avanzar el papel
                 for _ in range(extra_lines):
                     hdc.TextOut(0, y + line_height, "")  # Avanzar sin imprimir texto
@@ -349,18 +343,23 @@ class FormularioMaestroDesign(tk.Tk):
                         hora_registro, precio_boleto):
 
         texto = (
-            f"{estado_renta}\n"
-            f"Folio: {folio}\n"
-            f"Numero Placas: {numero_placas}\n"
-            f"Marca del Vehiculo: {nombre_marca}\n"
-            f"Modelo: {modelo_vehiculo}\n"
-            f"Color del Vehiculo: {color_coche}\n"
-            f"Hora de Registro: {hora_registro}\n"
-            f"Precio: ${precio_boleto}\n\n"
-            "Gracias por usar nuestro servicio.\n"
-            "Autotransportes Banderilla les desea\n"
-            "     !Un bonito día!    \n"
-
+            "ESTACIONAMIENTO NAOLINCO\n"
+            "GTZ. ZAMORA 23, CENTRO\n"
+            "NAOLINCO DE VICTORIA, VER. CP 91400\n\n"
+            #"HORARIO\n"
+            #f"{estado_renta}\n"
+            f"FOLIO: {folio}\n"
+            f"PLACAS: {numero_placas}\n"
+            f"MARCA: {nombre_marca}\n"
+            f"MODELO: {modelo_vehiculo}\n"
+            f"COLOR: {color_coche}\n"
+            f"ENTRADA: {hora_registro}\n"
+            f"PRECIO: ${precio_boleto}\n\n"
+            "COMPROBANTE SIN VALOR FISCAL\n"
+            "AUTOTRANSPORTES BANDERILLA LES DESEA\n"
+            "!UN BONITO DÍA!\n"
+            "\n"
+            "\n"
         )
 
         self.imprimir_texto(texto)
@@ -378,9 +377,12 @@ class FormularioMaestroDesign(tk.Tk):
                 color_coche TEXT,
                 numero_telefono TEXT,
                 hora_registro TEXT,
-                precio_boleto NUMERIC
+                precio_boleto NUMERIC,
+                usuario TEXT  -- Nueva columna para el nombre del usuario
             )
         ''')
+
+
         self.db_cursor.execute('''
                 CREATE TABLE IF NOT EXISTS salidas (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -408,7 +410,6 @@ class FormularioMaestroDesign(tk.Tk):
                             precio_boleto NUMERIC
                         )
                     ''')
-
         self.db_cursor.execute('''
                 CREATE TABLE IF NOT EXISTS folios (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -487,7 +488,7 @@ class FormularioMaestroDesign(tk.Tk):
         self.db_cursor.execute("UPDATE folios SET ultimo_folio = ?", (nuevo_numero_folio,))
         self.db_connection.commit()
 
-        hora_registro = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        hora_registro = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
 
         # Guardar en la base de datos la nueva renta
         self.db_cursor.execute('''
@@ -520,8 +521,6 @@ class FormularioMaestroDesign(tk.Tk):
         tk.Button(ventana_folio, text="Liberar",
                   command=lambda: self.liberar_espacio(folio_entry.get(), ventana_folio)).pack(pady=10)
 
-
-
     def liberar_espacio(self, folio_a_liberar, ventana_folio):
         # Buscar el ticket en la base de datos
         self.db_cursor.execute("SELECT * FROM rentas WHERE folio = ?", (folio_a_liberar,))
@@ -529,7 +528,7 @@ class FormularioMaestroDesign(tk.Tk):
 
         if ticket:
             # Insertar los datos del ticket en la tabla de salidas
-            hora_salida = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            hora_salida = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
             self.db_cursor.execute('''
                 INSERT INTO salidas (estado_salida, folio, numero_placas, nombre_marca, modelo_vehiculo, color_coche, numero_telefono, hora_registro, hora_salida, precio_boleto)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -631,7 +630,7 @@ class FormularioMaestroDesign(tk.Tk):
 
         if ticket:
             # Insertar los datos del ticket en la tabla de CANCELADOS
-            hora_registro = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            hora_registro = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
             self.db_cursor.execute('''
                 INSERT INTO cancelados (estado_cancelado, folio, numero_placas, motivo, comentario,
                  hora_registro, precio_boleto)
@@ -740,7 +739,7 @@ class FormularioMaestroDesign(tk.Tk):
         cursor = conexion.cursor()
 
         # Obtener la fecha actual
-        fecha_actual = datetime.now().strftime('%Y-%m-%d')
+        fecha_actual = datetime.now().strftime('%Y/%m/%d')
 
         # Consultar las tablas 'rentas' y 'salidas' con la fecha actual
         cursor.execute("SELECT * FROM rentas WHERE DATE(hora_registro) = ?", (fecha_actual,))
